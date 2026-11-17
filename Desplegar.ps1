@@ -1,52 +1,24 @@
-
 param(
-    [string]$RutaPHP = 'C:\xampp\php\php.exe'
+    [string]$RutaPHP = 'php',
+    [switch]$IniciarServidor
 )
 
-# Rutas de los archivos
-$archivoOrigen = Join-Path $PSScriptRoot 'origen\index.php'
-$carpetaPruebas = Join-Path $PSScriptRoot 'pruebas'
-$archivoDestino = Join-Path $carpetaPruebas 'index.php'
-
-if (-not (Test-Path $RutaPHP)) {
-    Write-Host "ERROR: No se encontro PHP en XAMPP." -ForegroundColor Red
-    exit 1
-}
-
-# Verificar que el archivo origen exista
-if (-not (Test-Path $archivoOrigen)) {
-    Write-Host "ERROR: No existe origen\index.php." -ForegroundColor Red
-    exit 1
-}
-
-
-Write-Host "Verificando sintaxis PHP..." -ForegroundColor Yellow
+$archivoOrigen = Join-Path $PSScriptRoot '.\origen\index.php'
+$archivoDestino = Join-Path $PSScriptRoot '.\pruebas\index.php'
 
 & $RutaPHP -l $archivoOrigen
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Hay un error de sintaxis. No se publico el cambio." -ForegroundColor Red
+    Write-Host "hay un error de sintaxis. No se publico el cambio."
     exit 1
 }
+Copy-Item $archivoOrigen $archivoDestino -Force -ErrorAction Stop
+Write-Host "Version publicada en el ambiente de pruebas."
 
-
-if (-not (Test-Path $carpetaPruebas)) {
-    New-Item -ItemType Directory -Path $carpetaPruebas -Force | Out-Null
+if ($IniciarServidor) {
+    if (Test-Path 'C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe') {
+        & 'C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe' -S localhost:8000 -t .\pruebas
+    } else {
+        & $RutaPHP -S localhost:8000 -t .\pruebas
+    }
 }
-
-
-try {
-    Copy-Item $archivoOrigen $archivoDestino -Force -ErrorAction Stop
-
-    Write-Host "Version publicada en el ambiente de prueba." -ForegroundColor Green
-}
-catch {
-    Write-Host "ERROR: No se pudo publicar el archivo: $_" -ForegroundColor Red
-    exit 1
-}
-
-
-Write-Host "Iniciando servidor PHP..." -ForegroundColor Cyan
-Write-Host "Abre http://localhost:8000 en tu navegador."
-
-& $RutaPHP -S localhost:8000 -t $carpetaPruebas
